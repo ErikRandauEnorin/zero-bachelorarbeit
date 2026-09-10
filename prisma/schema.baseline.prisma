@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model NeoomEnergyFlowSnapshot {
+  id               String   @id
+  siteId           String
+  powerConsumption Float?
+  powerProduction  Float?
+  powerStorage     Float?
+  powerGrid        Float?
+  stateOfCharge    Float?
+  selfSufficiency  Float?
+  rawJson          Json
+  fetchedAt        DateTime @default(now())
+}
+
+model NeoomSiteSnapshot {
+  id               String   @id
+  siteId           String   @unique
+  name             String?
+  address          String?
+  zip              String?
+  city             String?
+  country          String?
+  electricityPrice Float?
+  hasProducer      Boolean?
+  hasStorage       Boolean?
+  rawJson          Json
+  fetchedAt        DateTime @default(now())
+  updatedAt        DateTime
+}
+
+model OliRawTelemetrySnapshot {
+  id                    String    @id
+  deviceId              String
+  ts                    DateTime?
+  outdoorTempC          Float?
+  indoorTempC           Float?
+  flowTempC             Float?
+  returnTempC           Float?
+  targetFlowTempC       Float?
+  compressorPowerKw     Float?
+  auxHeaterPowerKw      Float?
+  totalPowerKw          Float?
+  cop                   Float?
+  mode                  String?
+  opState               String?
+  elecEnergyKwhTotal    Float?
+  thermalEnergyKwhTotal Float?
+  rawJson               Json
+  fetchedAt             DateTime  @default(now())
+}
+
+model OliTelemetry15mSnapshot {
+  id              String    @id
+  deviceId        String
+  bucketStart     DateTime?
+  sampleCount     Int?
+  sumOutdoorTempC Float?
+  sumIndoorTempC  Float?
+  sumFlowTempC    Float?
+  sumReturnTempC  Float?
+  sumTotalPowerKw Float?
+  sumCop          Float?
+  minOutdoorTempC Float?
+  maxOutdoorTempC Float?
+  minIndoorTempC  Float?
+  maxIndoorTempC  Float?
+  minTotalPowerKw Float?
+  maxTotalPowerKw Float?
+  lastMode        String?
+  lastOpState     String?
+  lastTs          DateTime?
+  sourceUpdatedAt DateTime?
+  rawJson         Json
+  fetchedAt       DateTime  @default(now())
+}

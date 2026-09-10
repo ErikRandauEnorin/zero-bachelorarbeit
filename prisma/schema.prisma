@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Role assigned to a login user (used for access control / session payload).
+enum UserRole {
+  ADMIN
+  CUSTOMER
+  SUPPLIER
+}
+
+// Kind of organization a tenant represents.
+enum TenantType {
+  CUSTOMER
+  SUPPLIER
+}
+
+// How a tenant relates to an asset (e.g. who supplies it, who consumes its
+// output, who operates it).
+enum AssetRelationType {
+  PROVIDED_BY
+  CONSUMED_BY
+  OPERATED_BY
+}
+
+// An organization (customer or supplier) using the portal.
+model Tenant {
+  id   Int        @id @default(autoincrement())
+  name String     @unique
+  type TenantType
+
+  users     User[]
+  assets    Asset[]
+  relations AssetTenantRelation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A login account (admin, customer, or supplier), optionally tied to a tenant.
+model User {
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
+  password String
+  role     UserRole @default(CUSTOMER)
+
+  tenantId Int?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// A physical/logical asset (e.g. a battery storage unit) owned by a tenant.
+model Asset {
+  id         Int     @id @default(autoincrement())
+  externalId String
+  name       String?
+  type       String?
+
+  // The primary responsible tenant, e.g. the business owner.
+  tenantId Int
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  relations AssetTenantRelation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId])
+}
+
+// Join table linking an asset to a tenant with a specific relation type
+// (e.g. one tenant supplies it, another consumes its output).
+model AssetTenantRelation {
+  assetId  Int
+  tenantId Int
+  relation AssetRelationType
+
+  asset  Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([assetId, tenantId, relation])
+  @@index([tenantId])
+}
+
+// Point-in-time snapshot of energy flow data pulled from the Neoom API
+// (consumption/production/storage/grid power, state of charge, etc.).
+model NeoomEnergyFlowSnapshot {
+  id               String   @id
+  siteId           String
+  powerConsumption Float?
+  powerProduction  Float?
+  powerStorage     Float?
+  powerGrid        Float?
+  stateOfCharge    Float?
+  selfSufficiency  Float?
+  rawJson          Json
+  fetchedAt        DateTime @default(now())
+}
+
+// Snapshot of site/location metadata from the Neoom API (address, whether
+// the site has a producer/storage, current electricity price, etc.).
+model NeoomSiteSnapshot {
+  id               String   @id
+  siteId           String   @unique
+  name             String?
+  address          String?
+  zip              String?
+  city             String?
+  country          String?
+  electricityPrice Float?
+  hasProducer      Boolean?
+  hasStorage       Boolean?
+  rawJson          Json
+  fetchedAt        DateTime @default(now())
+  updatedAt        DateTime
+}
+
+// Raw, unaggregated telemetry reading from an OLI heat pump device
+// (temperatures, power draw, COP, operating mode/state, etc.).
+model OliRawTelemetrySnapshot {
+  id                    String    @id
+  deviceId              String
+  ts                    DateTime?
+  outdoorTempC          Float?
+  indoorTempC           Float?
+  flowTempC             Float?
+  returnTempC           Float?
+  targetFlowTempC       Float?
+  compressorPowerKw     Float?
+  auxHeaterPowerKw      Float?
+  totalPowerKw          Float?
+  cop                   Float?
+  mode                  String?
+  opState               String?
+  elecEnergyKwhTotal    Float?
+  thermalEnergyKwhTotal Float?
+  rawJson               Json
+  fetchedAt             DateTime  @default(now())
+}
+
+// 15-minute aggregation (min/max/sum) of OLI heat pump telemetry readings,
+// used to reduce data volume for historical/trend views.
+model OliTelemetry15mSnapshot {
+  id              String    @id
+  deviceId        String
+  bucketStart     DateTime?
+  sampleCount     Int?
+  sumOutdoorTempC Float?
+  sumIndoorTempC  Float?
+  sumFlowTempC    Float?
+  sumReturnTempC  Float?
+  sumTotalPowerKw Float?
+  sumCop          Float?
+  minOutdoorTempC Float?
+  maxOutdoorTempC Float?
+  minIndoorTempC  Float?
+  maxIndoorTempC  Float?
+  minTotalPowerKw Float?
+  maxTotalPowerKw Float?
+  lastMode        String?
+  lastOpState     String?
+  lastTs          DateTime?
+  sourceUpdatedAt DateTime?
+  rawJson         Json
+  fetchedAt       DateTime  @default(now())
+}
