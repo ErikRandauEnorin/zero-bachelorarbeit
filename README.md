@@ -27,6 +27,7 @@ app/
   api/inexogy/route.ts      # Per-meter live power reading via the inexogy API
   api/sigencloud/route.ts   # Grid/PV/battery/load power via the Sigen Cloud OpenAPI
   api/weyland/route.ts      # Grid/PV/battery/load power via the Weyland Open Platform API
+  api/heat/route.ts         # Grid/PV/battery/load power via the HEAT Cloud API
 components/                 # UI components (Sidebar, AssetsView, AssetCard, AssetMap, dialogs, ...)
 lib/
   auth.ts                   # Session token creation/verification, credential check
@@ -35,6 +36,7 @@ lib/
   inexogy-auth.ts            # OAuth1-signed client for the inexogy API
   sigencloud-auth.ts         # Login + client for the Sigen Cloud OpenAPI
   weyland-auth.ts             # Login + client for the Weyland Open Platform API
+  heat-auth.ts                # Bearer-token client for the HEAT Cloud API
   mock-data.ts               # Mock assets used for the dashboard
   types.ts
 prisma/
@@ -57,6 +59,7 @@ unauthenticated:
 | `GET /api/inexogy` | [inexogy](https://inexogy.com) (OAuth1-signed) | Per-meter live power reading (W) for registered smart meters |
 | `GET /api/sigencloud` | Sigen Cloud OpenAPI | Grid / PV / battery / load power and battery state of charge for the account's system |
 | `GET /api/weyland` | Weyland Open Platform API | Grid / PV / battery / load power for the connected device |
+| `GET /api/heat` | [HEAT Cloud API](https://doc.heat-solutions.com/cloud-api) | Grid / PV / battery / load power and battery state of charge for the account's site |
 | `GET /api/spot-price` | [aWATTar](https://www.awattar.de) | Current EPEX day-ahead spot price (DE-LU), cached 15 minutes |
 | `POST /api/auth`, `POST /api/auth/logout` | — | Login / logout, issues and clears the session cookie |
 
@@ -106,6 +109,8 @@ deployment:
 | `WEYLAND_API_URL`          | Weyland Open Platform base URL.                                       |
 | `WEYLAND_USERNAME` / `WEYLAND_PASSWORD` | Weyland account credentials.                             |
 | `WEYLAND_CLIENT_ID` / `WEYLAND_DEVICE_SN` | Weyland client/device identifiers.                     |
+| `HEAT_API_KEY`             | HEAT Cloud API bearer token (`KEY-ID.KEY-SECRET`).                     |
+| `HEAT_SITE_ID`              | Optional: fixed HEAT site ID. If unset, the first site on the account is used. |
 
 Never commit real values — `.env*` is excluded via [.gitignore](.gitignore). Any route whose
 provider credentials are missing or invalid simply returns its `fallback` payload rather than
