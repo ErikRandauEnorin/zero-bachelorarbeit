@@ -7,6 +7,7 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    seed: "tsx prisma/seed.ts",
   },
   // Connection strings are read from environment variables; the shadow
   // database is used by Prisma Migrate to detect schema drift.

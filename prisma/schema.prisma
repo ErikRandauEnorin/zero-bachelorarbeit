@@ -6,28 +6,37 @@ datasource db {
   provider = "postgresql"
 }
 
-// Role assigned to a login user (used for access control / session payload).
+// Rolle, die einem Benutzerkonto zugewiesen ist (für Zugriffskontrolle / Session-Payload).
 enum UserRole {
   ADMIN
   CUSTOMER
   SUPPLIER
 }
 
-// Kind of organization a tenant represents.
+// Art der Organisation, die ein Tenant repräsentiert.
 enum TenantType {
   CUSTOMER
   SUPPLIER
 }
 
-// How a tenant relates to an asset (e.g. who supplies it, who consumes its
-// output, who operates it).
+// Art der Beziehung zwischen Tenant und Asset (z. B. wer liefert, wer verbraucht,
+// wer betreibt ein Asset).
 enum AssetRelationType {
   PROVIDED_BY
   CONSUMED_BY
   OPERATED_BY
 }
 
-// An organization (customer or supplier) using the portal.
+// Typ des externen Anbieters / der Datenquelle für Assets und Telemetriedaten.
+enum ProviderType {
+  NEOOM
+  OLI
+  WEYLAND
+  SIGEN
+  HEAT
+}
+
+// Eine Organisation (Kunde oder Lieferant), die das Portal nutzt.
 model Tenant {
   id   Int        @id @default(autoincrement())
   name String     @unique
@@ -41,7 +50,7 @@ model Tenant {
   updatedAt DateTime @updatedAt
 }
 
-// A login account (admin, customer, or supplier), optionally tied to a tenant.
+// Ein Login-Konto (Admin, Kunde oder Lieferant), optional einem Tenant zugeordnet.
 model User {
   id       Int      @id @default(autoincrement())
   email    String   @unique
@@ -57,18 +66,23 @@ model User {
   @@index([tenantId])
 }
 
-// A physical/logical asset (e.g. a battery storage unit) owned by a tenant.
+// Ein physisches oder logisches Asset (z. B. Batteriespeicher), das einem Tenant gehört.
 model Asset {
   id         Int     @id @default(autoincrement())
   externalId String
   name       String?
   type       String?
 
-  // The primary responsible tenant, e.g. the business owner.
+  // Primär verantwortlicher Tenant, z. B. der geschäftliche Betreiber.
   tenantId Int
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
-  relations AssetTenantRelation[]
+  relations           AssetTenantRelation[]
+  // Kanonische Messwerte und Flexibilitätsprofile für dieses Asset.
+  measurements        AssetMeasurement[]
+  flexibilityProfiles AssetFlexibilityProfile[]
+  // Zuordnung zu externen Provider-Geräten/Sites.
+  providerMappings    ProviderDeviceMapping[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -77,8 +91,8 @@ model Asset {
   @@index([tenantId])
 }
 
-// Join table linking an asset to a tenant with a specific relation type
-// (e.g. one tenant supplies it, another consumes its output).
+// Verknüpfungstabelle, die ein Asset mit einem Tenant und einer Beziehung verknüpft
+// (z. B. ein Tenant liefert, ein anderer verbraucht die Leistung eines Assets).
 model AssetTenantRelation {
   assetId  Int
   tenantId Int
@@ -93,8 +107,81 @@ model AssetTenantRelation {
   @@index([tenantId])
 }
 
-// Point-in-time snapshot of energy flow data pulled from the Neoom API
-// (consumption/production/storage/grid power, state of charge, etc.).
+// Zuordnung zwischen externen Provider-Identifikatoren (z. B. Neoom siteId,
+// OLI deviceId) und internen Assets. Entkoppelt provider-spezifische IDs
+// vom kanonischen Asset-Modell.
+model ProviderDeviceMapping {
+  provider         ProviderType
+  providerDeviceId String
+  assetId          Int
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([provider, providerDeviceId])
+  @@index([assetId])
+}
+
+// Kanonischer Zeitreihen-Messwert für ein Asset, der im Monitoring-Anwendungsfall
+// verwendet wird. Werte verschiedener Provider (Neoom, OLI, etc.) werden
+// in diese Struktur normalisiert.
+model AssetMeasurement {
+  id      Int      @id @default(autoincrement())
+  assetId Int
+
+  // Kanonischer Messgrößentyp, z. B. "grid_power", "pv_power",
+  // "battery_power", "battery_soc", "heat_pump_power".
+  measurementType String
+
+  observedAt DateTime
+  value      Float
+
+  // Physikalische Einheit des Messwerts, z. B. "kW", "kWh", "V", "%".
+  unit String
+
+  // Optionale Provenienz-Informationen.
+  sourceProvider ProviderType?
+  sourceRef      String?    // z. B. provider-spezifische Snapshot-ID
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([assetId, measurementType, observedAt])
+}
+
+// Flexibilitätsprofil für ein Asset. Beschreibt technische Betriebsbereiche
+// und optionale Zeitfenster, die im Flexibilitäts-Anwendungsfall genutzt werden.
+model AssetFlexibilityProfile {
+  id      Int @id @default(autoincrement())
+  assetId Int
+
+  // Technischer Leistungsbereich in kW, der flexibel angepasst werden kann.
+  minPowerKw Float?
+  maxPowerKw Float?
+
+  // Optionaler Ladezustandsbereich in Prozent für Speicher-Assets.
+  minSocPercent Float?
+  maxSocPercent Float?
+
+  // Optionales Zeitfenster, in dem Flexibilität als verfügbar betrachtet wird.
+  availableFrom DateTime?
+  availableTo   DateTime?
+
+  // Freitext für zusätzliche Restriktionen (Komfort, Betriebsregeln, etc.).
+  notes String?
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assetId])
+}
+
+// Zeitpunktbezogener Snapshot von Energieflussdaten aus der Neoom-API
+// (Verbrauch/Erzeugung/Speicher/Netzleistung, Ladezustand, etc.).
 model NeoomEnergyFlowSnapshot {
   id               String   @id
   siteId           String
@@ -108,8 +195,8 @@ model NeoomEnergyFlowSnapshot {
   fetchedAt        DateTime @default(now())
 }
 
-// Snapshot of site/location metadata from the Neoom API (address, whether
-// the site has a producer/storage, current electricity price, etc.).
+// Snapshot von Standort-/Site-Metadaten aus der Neoom-API (Adresse,
+// Erzeuger-/Speicher-Flags, aktueller Strompreis, etc.).
 model NeoomSiteSnapshot {
   id               String   @id
   siteId           String   @unique
@@ -126,8 +213,8 @@ model NeoomSiteSnapshot {
   updatedAt        DateTime
 }
 
-// Raw, unaggregated telemetry reading from an OLI heat pump device
-// (temperatures, power draw, COP, operating mode/state, etc.).
+// Unaggregierter Telemetriesnapshot einer OLI-Wärmepumpe
+// (Temperaturen, Leistungsaufnahme, COP, Betriebsmodus/-zustand, etc.).
 model OliRawTelemetrySnapshot {
   id                    String    @id
   deviceId              String
@@ -149,8 +236,8 @@ model OliRawTelemetrySnapshot {
   fetchedAt             DateTime  @default(now())
 }
 
-// 15-minute aggregation (min/max/sum) of OLI heat pump telemetry readings,
-// used to reduce data volume for historical/trend views.
+// 15-Minuten-Aggregation (min/max/Summe) der OLI-Wärmepumpentelemetrie,
+// zur Reduktion des Datenvolumens für Verlaufs- und Trendbetrachtungen.
 model OliTelemetry15mSnapshot {
   id              String    @id
   deviceId        String
