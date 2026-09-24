@@ -1,6 +1,7 @@
 import { ProviderType } from "@prisma/client";
 
 import { getPrisma } from "@/lib/prisma";
+import { weylandGet } from "@/lib/weyland-auth";
 import {
   MEASUREMENT_TYPES,
   MEASUREMENT_UNITS,
@@ -58,6 +59,20 @@ export async function importWeylandMeasurements(assetId: number) {
   };
 }
 
+type WeylandOverviewResponse = {
+  code?: number;
+  message?: string;
+  data?: {
+    power?: {
+      grid?: number | null;
+      pv?: number | null;
+      battery?: number | null;
+      load?: number | null;
+      unit?: string;
+    };
+  };
+};
+
 type WeylandCurrentData = {
   observedAt: Date;
   gridPowerKw?: number;
@@ -70,11 +85,36 @@ type WeylandCurrentData = {
 async function fetchCurrentWeylandData(
   providerDeviceId: string,
 ): Promise<WeylandCurrentData> {
-  void providerDeviceId;
-
-  throw new Error(
-    "Die Weyland-Anbindung wurde noch nicht mit der vorhandenen API-Route verbunden.",
+  const response = await weylandGet<WeylandOverviewResponse>(
+    "/api-open/ems/v1/overview",
+    {
+      deviceSn: providerDeviceId,
+    },
   );
+
+  const power = response.data?.power;
+
+  if (!power) {
+    throw new Error(
+      `Weyland lieferte für Gerät ${providerDeviceId} keine Leistungsdaten.`,
+    );
+  }
+
+  return {
+    observedAt: new Date(),
+    gridPowerKw: wattsToKilowatts(power.grid),
+    pvPowerKw: wattsToKilowatts(power.pv),
+    batteryPowerKw: wattsToKilowatts(power.battery),
+    loadPowerKw: wattsToKilowatts(power.load),
+  };
+}
+
+function wattsToKilowatts(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return undefined;
+  }
+
+  return value / 1000;
 }
 
 function mapWeylandData(

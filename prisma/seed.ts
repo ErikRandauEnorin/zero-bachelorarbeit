@@ -1,13 +1,20 @@
 // prisma/seed.ts
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-const connectionString = process.env.DATABASE_URL;
+function requireEnv(name: string): string {
+  const value = process.env[name];
 
-if (!connectionString) {
-  throw new Error('DATABASE_URL ist nicht gesetzt.');
+  if (!value) {
+    throw new Error(`${name} ist nicht gesetzt.`);
+  }
+
+  return value;
 }
+
+const connectionString = requireEnv("DATABASE_URL");
+const weylandDeviceSn = requireEnv("WEYLAND_DEVICE_SN");
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
@@ -35,7 +42,7 @@ async function main() {
   await prisma.providerDeviceMapping.create({
     data: {
       provider: 'WEYLAND',
-      providerDeviceId: 'DEIN_WEYLAND_DEVICE_ID', // clientId/sn o.Ä.
+      providerDeviceId: weylandDeviceSn, // clientId/sn o.Ä.
       assetId: asset.id,
     },
   });

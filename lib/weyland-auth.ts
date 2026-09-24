@@ -86,23 +86,37 @@ export async function getWeylandAccessToken(): Promise<string> {
  * (e.g. "/api-open/ems/v1/overview"), automatically attaching the bearer
  * token, clientId and device serial number query params.
  */
-export async function weylandGet<T>(path: string): Promise<T> {
-  const clientId = process.env.WEYLAND_CLIENT_ID;
-  const deviceSn = process.env.WEYLAND_DEVICE_SN;
+type WeylandGetOptions = {
+  deviceSn?: string;
+};
 
-  if (!clientId || !deviceSn) {
+export async function weylandGet<T>(
+  path: string,
+  options: WeylandGetOptions = {},
+): Promise<T> {
+  const clientId = process.env.WEYLAND_CLIENT_ID;
+  const deviceSn = options.deviceSn ?? process.env.WEYLAND_DEVICE_SN;
+
+  if (!clientId) {
+    throw new Error("WEYLAND_CLIENT_ID muss gesetzt sein.");
+  }
+
+  if (!deviceSn) {
     throw new Error(
-      "WEYLAND_CLIENT_ID und WEYLAND_DEVICE_SN müssen gesetzt sein.", // "... must be set."
+      "Es wurde weder eine Geräte-Seriennummer übergeben noch WEYLAND_DEVICE_SN gesetzt.",
     );
   }
 
   const accessToken = await getWeylandAccessToken();
   const url = new URL(`${getWeylandApiUrl()}${path}`);
+
   url.searchParams.set("sn", deviceSn);
   url.searchParams.set("clientId", clientId);
 
   const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
     cache: "no-store",
   });
 
