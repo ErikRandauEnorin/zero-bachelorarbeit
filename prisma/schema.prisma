@@ -77,6 +77,24 @@ model Asset {
   tenantId Int
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  // Stammdaten für Frontend, Kartenansicht und technische Einordnung
+  manufacturer String?
+  model        String?
+
+  street  String?
+  zip     String?
+  city    String?
+  country String?
+
+  lat Float?
+  lng Float?
+
+  commissionedAt DateTime?
+
+  // Technische Kenndaten
+  connectionKw Float?
+  capacityKwh  Float?
+
   relations           AssetTenantRelation[]
   // Kanonische Messwerte und Flexibilitätsprofile für dieses Asset.
   measurements        AssetMeasurement[]
