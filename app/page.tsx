@@ -31,20 +31,26 @@ export default async function Home() {
   });
 
   // Map DB assets → StorageAsset shape expected by AssetsView.
-  // Live monitoring values (soc, powerKw, metrics) are placeholders here;
-  // AssetCard will fetch them from /api/assets/[id]/monitoring/current.
+  // Live monitoring values (soc, powerKw, metrics) are loaded client-side
+  // via /api/assets/[id]/monitoring/current in AssetCard.
   const assets: StorageAsset[] = dbAssets.map((a) => ({
     id: String(a.id),
-    model: a.name ?? a.type ?? `Asset ${a.id}`,
-    manufacturer: a.tenant.name,
-    connectionKw: 0,
-    capacityKwh: 0,
+    model: a.model ?? a.name ?? a.type ?? `Asset ${a.id}`,
+    manufacturer: a.manufacturer ?? a.tenant.name,
+    connectionKw: a.connectionKw ?? 0,
+    capacityKwh: a.capacityKwh ?? 0,
     soc: 0,
     status: "aktiv",
-    address: { street: "", zip: "", city: "" },
-    lat: 0,
-    lng: 0,
-    commissioned: a.createdAt.getFullYear().toString(),
+    address: {
+      street: a.street ?? "",
+      zip: a.zip ?? "",
+      city: a.city ?? "",
+    },
+    lat: a.lat ?? 0,
+    lng: a.lng ?? 0,
+    commissioned: a.commissionedAt
+      ? a.commissionedAt.getFullYear().toString()
+      : a.createdAt.getFullYear().toString(),
     priceRules: [],
     fallbackAction: "standby",
     automationEnabled: false,
