@@ -102,6 +102,27 @@ async function main() {
     });
   }
 
+    const existingBatterySoc = await prisma.assetMeasurement.count({
+    where: {
+      assetId: asset.id,
+      measurementType: "battery_soc",
+    },
+  });
+
+  if (existingBatterySoc === 0) {
+    await prisma.assetMeasurement.create({
+      data: {
+        assetId: asset.id,
+        measurementType: "battery_soc",
+        observedAt: new Date(),
+        value: 42,
+        unit: "%",
+        sourceProvider: "WEYLAND",
+        sourceRef: weylandDeviceSn,
+      },
+    });
+  }
+
   console.log(`✅ Seed abgeschlossen. Asset-ID: ${asset.id}`);
 }
 
