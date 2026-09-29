@@ -129,17 +129,20 @@ async function main() {
   });
 
   if (!existingProfile) {
-    await prisma.assetFlexibilityProfile.create({
-      data: {
-        assetId: asset.id,
-        minPowerKw: -3.0,
-        maxPowerKw: 3.0,
-        minSocPercent: 20,
-        maxSocPercent: 90,
-        notes: "Demo-Flexibilitätsprofil für Bachelorarbeit",
-      },
-    });
-  }
+  await prisma.assetFlexibilityProfile.create({
+    data: {
+      assetId: asset.id,
+      minPowerKw: -3.0,
+      maxPowerKw: 3.0,
+      minSocPercent: 20,
+      maxSocPercent: 90,
+      rampUpMinutes: 2,
+      rampDownMinutes: 2,
+      minRuntimeMinutes: 5,
+      notes: "Demo-Flexibilitätsprofil für Bachelorarbeit",
+    },
+  });
+}
 
   const existingBatterySoc = await prisma.assetMeasurement.count({
     where: {

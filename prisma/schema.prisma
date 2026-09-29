@@ -141,6 +141,13 @@ model ProviderDeviceMapping {
   @@index([assetId])
 }
 
+// Qualitätsstatus eines Messwerts.
+enum MeasurementQuality {
+  VALID      // Wert wurde erfolgreich validiert und ist plausibel
+  ESTIMATED  // Wert ist interpoliert oder geschätzt (z. B. bei Lücken)
+  MISSING    // Kein Wert vorhanden; Datensatz als Platzhalter angelegt
+}
+
 // Kanonischer Zeitreihen-Messwert für ein Asset, der im Monitoring-Anwendungsfall
 // verwendet wird. Werte verschiedener Provider (Neoom, OLI, etc.) werden
 // in diese Struktur normalisiert.
@@ -157,6 +164,9 @@ model AssetMeasurement {
 
   // Physikalische Einheit des Messwerts, z. B. "kW", "kWh", "V", "%".
   unit String
+
+  // Qualitätsstatus des Messwerts (Kap. 4.2 Bachelorarbeit).
+  quality MeasurementQuality @default(VALID)
 
   // Optionale Provenienz-Informationen.
   sourceProvider ProviderType?
@@ -186,6 +196,11 @@ model AssetFlexibilityProfile {
   // Optionales Zeitfenster, in dem Flexibilität als verfügbar betrachtet wird.
   availableFrom DateTime?
   availableTo   DateTime?
+
+  // Rampen- und Laufzeitrestriktionen (Kap. 5.2.2 Bachelorarbeit).
+  rampUpMinutes   Int?  // Mindestzeit in Minuten zum Hochfahren auf Zielleistung
+  rampDownMinutes Int?  // Mindestzeit in Minuten zum Herunterfahren
+  minRuntimeMinutes Int? // Mindestlaufzeit je Aktivierung in Minuten
 
   // Freitext für zusätzliche Restriktionen (Komfort, Betriebsregeln, etc.).
   notes String?

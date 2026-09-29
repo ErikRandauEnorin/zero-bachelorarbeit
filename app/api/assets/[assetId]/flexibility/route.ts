@@ -122,10 +122,13 @@ export async function POST(
     maxSocPercent,
     availableFrom: availableFromRaw,
     availableTo: availableToRaw,
+    rampUpMinutes,
+    rampDownMinutes,
+    minRuntimeMinutes,
     notes,
   } = body;
 
-  // Numerische Felder validieren
+  // Numerische Float-Felder validieren
   for (const [key, val] of Object.entries({
     minPowerKw,
     maxPowerKw,
@@ -135,6 +138,20 @@ export async function POST(
     if (val !== undefined && (typeof val !== "number" || !Number.isFinite(val))) {
       return NextResponse.json(
         { error: `'${key}' muss eine Zahl sein.` },
+        { status: 400 },
+      );
+    }
+  }
+
+  // Ganzzahl-Felder validieren
+  for (const [key, val] of Object.entries({
+    rampUpMinutes,
+    rampDownMinutes,
+    minRuntimeMinutes,
+  })) {
+    if (val !== undefined && (!Number.isInteger(val) || (val as number) < 0)) {
+      return NextResponse.json(
+        { error: `'${key}' muss eine nicht-negative Ganzzahl sein.` },
         { status: 400 },
       );
     }
@@ -211,6 +228,9 @@ export async function POST(
       maxSocPercent: maxSocPercent as number | undefined,
       availableFrom,
       availableTo,
+      rampUpMinutes: rampUpMinutes as number | undefined,
+      rampDownMinutes: rampDownMinutes as number | undefined,
+      minRuntimeMinutes: minRuntimeMinutes as number | undefined,
       notes: typeof notes === "string" ? notes : undefined,
     },
   });
