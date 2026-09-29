@@ -4,6 +4,7 @@ export const MEASUREMENT_TYPES = {
   LOAD_POWER: "load_power",
   BATTERY_POWER: "battery_power",
   BATTERY_SOC: "battery_soc",
+  HEAT_PUMP_POWER: "heat_pump_power",
 } as const;
 
 export type MeasurementType =

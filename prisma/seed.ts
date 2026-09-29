@@ -12,6 +12,11 @@ function requireEnv(name: string): string {
 const connectionString = requireEnv("DATABASE_URL");
 const weylandDeviceSn = requireEnv("WEYLAND_DEVICE_SN");
 
+// Optionale IDs — bei fehlendem Env-Wert wird "auto" gesetzt.
+// Die Import-Funktionen lösen dann die echte ID zur Laufzeit via API auf.
+const sigenSystemId = process.env.SIGENCLOUD_SYSTEM_ID ?? "auto";
+const heatSiteId = process.env.HEAT_SITE_ID ?? "auto";
+
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
@@ -68,7 +73,9 @@ async function main() {
     },
   });
 
-  // Zuordnung Asset ↔ Weyland-Gerät (idempotent via @@id)
+  // --- Provider-Mappings (alle idempotent via @@id) ---
+
+  // WEYLAND
   await prisma.providerDeviceMapping.upsert({
     where: {
       provider_providerDeviceId: {
@@ -80,6 +87,38 @@ async function main() {
     create: {
       provider: "WEYLAND",
       providerDeviceId: weylandDeviceSn,
+      assetId: asset.id,
+    },
+  });
+
+  // SIGEN — providerDeviceId ist die systemId oder "auto" (wird zur Laufzeit aufgelöst)
+  await prisma.providerDeviceMapping.upsert({
+    where: {
+      provider_providerDeviceId: {
+        provider: "SIGEN",
+        providerDeviceId: sigenSystemId,
+      },
+    },
+    update: { assetId: asset.id },
+    create: {
+      provider: "SIGEN",
+      providerDeviceId: sigenSystemId,
+      assetId: asset.id,
+    },
+  });
+
+  // HEAT — providerDeviceId ist die siteId oder "auto" (wird zur Laufzeit aufgelöst)
+  await prisma.providerDeviceMapping.upsert({
+    where: {
+      provider_providerDeviceId: {
+        provider: "HEAT",
+        providerDeviceId: heatSiteId,
+      },
+    },
+    update: { assetId: asset.id },
+    create: {
+      provider: "HEAT",
+      providerDeviceId: heatSiteId,
       assetId: asset.id,
     },
   });
@@ -102,7 +141,7 @@ async function main() {
     });
   }
 
-    const existingBatterySoc = await prisma.assetMeasurement.count({
+  const existingBatterySoc = await prisma.assetMeasurement.count({
     where: {
       assetId: asset.id,
       measurementType: "battery_soc",
@@ -123,7 +162,9 @@ async function main() {
     });
   }
 
-  console.log(`✅ Seed abgeschlossen. Asset-ID: ${asset.id}`);
+  console.log(
+    `✅ Seed abgeschlossen. Asset-ID: ${asset.id} | SIGEN-ID: ${sigenSystemId} | HEAT-ID: ${heatSiteId}`,
+  );
 }
 
 main()
