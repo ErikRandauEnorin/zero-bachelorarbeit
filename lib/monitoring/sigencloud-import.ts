@@ -45,7 +45,7 @@ function mapSigencloudData(
   const addMeasurement = (
     measurementType: NormalizedMeasurement["measurementType"],
     value: number | undefined,
-    unit: string,
+    unit: NormalizedMeasurement["unit"],
   ) => {
     if (typeof value !== "number" || !Number.isFinite(value)) return;
     measurements.push({ measurementType, value, unit, observedAt, sourceRef });

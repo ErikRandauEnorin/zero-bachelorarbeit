@@ -15,10 +15,13 @@ export const MEASUREMENT_UNITS = {
   PERCENT: "%",
 } as const;
 
+export type MeasurementUnit =
+  (typeof MEASUREMENT_UNITS)[keyof typeof MEASUREMENT_UNITS];
+
 export type NormalizedMeasurement = {
   measurementType: MeasurementType;
   value: number;
-  unit: string;
+  unit: MeasurementUnit;
   observedAt: Date;
-  sourceRef?: string;
+  sourceRef: string;
 };
